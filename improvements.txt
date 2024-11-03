@@ -4,3 +4,4 @@
 - stats data 
 	-- add more relative to the different hex_ids
 	-- it says 1066 but this includes duplicates, which I solve for predition, but not here. There are around 760
+- predictions have really low variability: running the model using different hierarchies will help.
