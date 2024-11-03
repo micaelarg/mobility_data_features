@@ -1,22 +1,21 @@
 Feature,Importancia
-weighted_uni_importance,0.14980346
-nearest_tourist_spot_dist,0.13831003
-weighted_tourist_importance,0.039587572
-weighted_city_importance,0.028720295
-nearest_uni_dist,0.026051024
-weighted_elevation,0.024893029
-residential_activity_score,0.024248406
-coast_distance,0.020111933
-unique_devices,0.019858211
-nearest_mountain_dist,0.019514712
-total_records,0.01879356
-nearest_city_dist,0.01824411
-lon,0.015906585
-frequent_devices,0.012295842
-records_per_device,0.009639752
-Unnamed: 0,0.009205155
-lat,0.005843561
-device_diversity,0.001780308
+weighted_uni_importance,0.15592778
+nearest_tourist_spot_dist,0.119417585
+weighted_tourist_importance,0.031092854
+weighted_city_importance,0.02458911
+residential_activity_score,0.02372036
+nearest_uni_dist,0.02314221
+weighted_elevation,0.022702212
+nearest_mountain_dist,0.020985411
+nearest_city_dist,0.017795933
+lon,0.017386215
+total_records,0.016882785
+coast_distance,0.016109526
+device_diversity,0.013545337
+records_per_device,0.012204968
+unique_devices,0.012007054
+lat,0.009232175
+Unnamed: 0,0.008940989
 day_of_week,0.0
 weekend_ratio,0.0
 weekday_ratio,0.0
@@ -26,6 +25,7 @@ business_hours_ratio,0.0
 morning_ratio,0.0
 afternoon_ratio,0.0
 evening_ratio,0.0
+frequent_devices,0.0
 very_frequent_devices,0.0
 commercial_activity_score,0.0
 weighted_mountain_influence,0.0
