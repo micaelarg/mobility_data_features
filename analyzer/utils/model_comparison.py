@@ -83,9 +83,12 @@ class ModelComparer:
         }
     
     def prepare_test_data(self, test_data: pd.DataFrame) -> np.ndarray:
-        required_features = [f"{feature}_squared" for feature in self.feature_cols if f"{feature}_squared" not in test_data.columns]
-        test_data = self.add_non_linear_features(test_data[self.feature_cols], required_features)
-        
+        base_features = [col for col in self.feature_cols if col in test_data.columns]
+        test_data = self.add_non_linear_features(test_data[base_features], base_features)
+        missing_features = [f for f in self.feature_cols if f not in test_data.columns]
+        print('There are missing features')
+        for feature in missing_features:
+            test_data[feature] = 0
         return test_data
 
     
