@@ -1,4 +1,5 @@
 - add more external features; 
 - there is an Unnamed: 0 feature in feature importante -- didn't change the name because it has zero importance, but it deserves the name;
-- add stats data relative to the different hex_ids
-
+- stats data 
+	-- add more relative to the different hex_ids
+	-- it says 1066 but this includes duplicates, which I solve for predition, but not here. There are around 760
