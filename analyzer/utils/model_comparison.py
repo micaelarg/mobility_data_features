@@ -35,15 +35,16 @@ class ModelComparer:
     def add_non_linear_features(self, data: pd.DataFrame, selected_features: List[str]) -> pd.DataFrame:
         transformations = {}
         for feature in selected_features:
-            for feature in selected_features:
-                data[f"{feature}_squared"] = data[feature] ** 2
-                data[f"{feature}_cubed"] = data[feature] ** 3 
-                data[f"{feature}_sqrt"] = np.sqrt(np.abs(data[feature]))
-                data[f"{feature}_log"] = np.log1p(np.abs(data[feature]))
+            transformations[f"{feature}_squared"] = data[feature] ** 2
+            transformations[f"{feature}_cubed"] = data[feature] ** 3 
+            transformations[f"{feature}_sqrt"] = np.sqrt(np.abs(data[feature]))
+            transformations[f"{feature}_log"] = np.log1p(np.abs(data[feature]))
+    
         transformed_features = pd.DataFrame(transformations, index=data.index)
         data = pd.concat([data, transformed_features], axis=1)
         
         return data
+
 
     def prepare_data(self, train_data: pd.DataFrame, val_data: pd.DataFrame, feature_cols: List[str]) -> Dict:
         print("\nPreparando la data...")

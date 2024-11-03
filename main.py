@@ -11,6 +11,8 @@ from data.external_data.location_data import (
     geographic_features
 )
 from analyzer.utils.model_comparison import ModelComparer
+import warnings
+warnings.filterwarnings("ignore", category=pd.errors.PerformanceWarning)
 
 
 def main():
