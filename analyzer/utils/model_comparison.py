@@ -8,49 +8,19 @@ from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 import matplotlib.pyplot as plt
 from typing import Dict, List
 from tqdm.auto import tqdm
-from itertools import product
 from pathlib import Path
 from typing import Tuple
 from sklearn.model_selection import GridSearchCV, train_test_split
 from lightgbm import LGBMRegressor
-# from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.ensemble import RandomForestRegressor
-from tqdm import tqdm
-import time
 
-class TqdmGridSearchCV(GridSearchCV):
-    def __init__(self, *args, model_name="", **kwargs):
-        super().__init__(*args, **kwargs)
-        self.model_name = model_name
 
-    def _get_param_iterator(self):
-        param_grid = self.param_grid
-        if not isinstance(param_grid, (list, tuple)):
-            param_grid = [param_grid]
-            
-        items = list(param_grid[0].items())
-        keys, values = zip(*items)
-        
-        for v in product(*values):
-            params = dict(zip(keys, v))
-            yield params
-            
-    def _run_search(self, evaluate_candidates):
-        param_combinations = list(self._get_param_iterator())
-        n_combinations = len(param_combinations)
 
-        def evaluate_candidates_with_progress(candidates):
-            with tqdm(total=n_combinations, desc=f"Grid Search ({self.model_name})") as pbar:
-                start_time = time.time()
-                for i, parameters in enumerate(candidates):
-                    yield parameters
-                    elapsed_time = time.time() - start_time
-                    avg_time_per_iteration = elapsed_time / (i + 1)
-                    remaining_time = avg_time_per_iteration * (n_combinations - i - 1)
-                    pbar.set_postfix(time_left=f"{remaining_time:.2f}s")
-                    pbar.update(1)
-                    
-        return evaluate_candidates(evaluate_candidates_with_progress(param_combinations))
+def run_grid_search(estimator, param_grid, X_train, y_train, model_name=""):
+    grid_search = GridSearchCV(estimator, param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=4, verbose=1)
+    grid_search.fit(X_train, y_train)
+    return grid_search.best_estimator_
 
 
 class ModelComparer:
@@ -138,11 +108,11 @@ class ModelComparer:
         prepared_data = self.prepare_data(train_data, val_data, feature_cols)
         
         models_to_train = {
-            'GBM': self.train_gbm,
-            'XGBoost': self.train_xgboost,
-            # 'LinearRegression': self.train_regression,
-            'LightGBM': self.train_lightgbm,
-            'RandomForest': self.train_random_forest,
+            'gbm': self.train_gbm,
+            'xgboost': self.train_xgboost,
+            'lightgbm': self.train_lightgbm,
+            'random_forest': self.train_random_forest,
+            'linear_regression': self.train_regression,
         }
         
         for model_name, train_func in models_to_train.items():
@@ -155,11 +125,10 @@ class ModelComparer:
                     prepared_data['y_val'],
                 )
                 self.metrics[model_name] = self.evaluate_model(
-                    self.models[model_name.lower()],
+                    self.models[model_name],  
                     prepared_data['X_val'],
                     prepared_data['y_val']
                 )
-               
             except Exception as e:
                 print(f"Error entrenando {model_name}: {str(e)}")
                 self.metrics[model_name] = {
@@ -170,10 +139,10 @@ class ModelComparer:
         
         print("\nCreando plots comparativos")
         self.plot_model_comparison()
-
+    
         best_model = min(self.metrics.items(), key=lambda x: x[1]['rmse'])
-        return best_model[0], self.models[best_model[0].lower()], self.metrics
-
+        return best_model[0], self.models[best_model[0]], self.metrics
+    
 
     def _calculate_metrics(self, y_true, y_pred) -> Dict[str, float]:
         return {
@@ -217,35 +186,18 @@ class ModelComparer:
         }
         
         model = GradientBoostingRegressor(
-            random_state=6,
-            validation_fraction=0.2,
-            n_iter_no_change=10,
-            tol=1e-4
+        random_state=6,
+        validation_fraction=0.2,
+        n_iter_no_change=10,
+        tol=1e-4
         )
+        best_model = run_grid_search(model, param_grid, X_train, y_train, model_name="GBM")
+        predictions = best_model.predict(X_val)
         
-        grid_search = TqdmGridSearchCV(
-            model, 
-            param_grid, 
-            cv=10,
-            scoring='neg_mean_squared_error', 
-            verbose=0,
-            n_jobs=8
-        )
-        
-        with tqdm(total=1, desc='Entrenando GBM') as pbar:
-            grid_search.fit(X_train, y_train)
-            pbar.update(1)
-        
-        best_model = grid_search.best_estimator_
-        
-        with tqdm(total=1, desc='Predictions GBM') as pbar:
-            predictions = best_model.predict(X_val)
-            pbar.update(1)
-            
         metrics = self._calculate_metrics(y_val, predictions)
         self.models['gbm'] = best_model
-        
-        print(f"\nBest parámetros GBM: {grid_search.best_params_}")
+    
+        print(f"\nBest parámetros GBM: {best_model.get_params()}")
         return metrics
 
     def train_xgboost(self, X_train, y_train, X_val, y_val) -> Dict[str, float]:
@@ -267,48 +219,43 @@ class ModelComparer:
             verbosity=0,
             n_jobs=4
         )
+        best_model = run_grid_search(model, param_grid, X_train, y_train, model_name="XGBoost")
+        predictions = best_model.predict(X_val)
         
-        grid_search = TqdmGridSearchCV(
-            model, 
-            param_grid, 
-            cv=3,
-            scoring='neg_mean_squared_error',
-            verbose=0,
-            n_jobs=4,
-            error_score='raise'
-        )
-        
-        grid_search.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
-        best_model = grid_search.best_estimator_
-        
+        metrics = self._calculate_metrics(y_val, predictions)
         self.models['xgboost'] = best_model
-        return self.evaluate_model(best_model, X_val, y_val)
-
-    # def train_regression(self, X_train, y_train, X_val, y_val) -> Dict[str, float]:
-    #     print("\nEntrenando Plain Linear Regression")
-    #     model = LinearRegression()
-    
-    #     try:
-    #         model.fit(X_train, y_train)
-            
-    #         self.models['linear_regression'] = model
-    #         metrics = self.evaluate_model(model, X_val, y_val)
-            
-    #         if np.isinf(metrics['rmse']):
-    #             model = Ridge(alpha=0.001)
-    #             model.fit(X_train, y_train)
-    #             self.models['ridge'] = model
-    #             metrics = self.evaluate_model(model, X_val, y_val)
-    
-    #         return metrics
         
-    #     except Exception as e:
-    #         print(f"Error entrenando Linear Regression: {e}")
-    #         return {
-    #             'rmse': float('inf'),
-    #             'mae': float('inf'),
-    #             'r2': float('-inf')
-    #         }
+        return metrics
+
+
+    def train_regression(self, X_train, y_train, X_val, y_val) -> Dict[str, float]:
+        print("\nEntrenando Plain Linear Regression")
+        model = LinearRegression()
+        
+        try:
+
+            model.fit(X_train, y_train)
+            
+            self.models['linear_regression'] = model
+            metrics = self.evaluate_model(model, X_val, y_val)
+            
+            if np.isinf(metrics['rmse']):
+                print("\nSwitch a Ridge")
+                model = Ridge(alpha=0.001) 
+                model.fit(X_train, y_train)
+                  
+                self.models['ridge'] = model
+                metrics = self.evaluate_model(model, X_val, y_val)
+    
+            return metrics
+        
+        except Exception as e:
+            print(f"Error entrenando Linear Regression: {e}")
+            return {
+                'rmse': float('inf'),
+                'mae': float('inf'),
+                'r2': float('-inf')
+            }
 
     def train_random_forest(self, X_train, y_train, X_val, y_val) -> Dict[str, float]:
         print("\nEntrenando Random Forest")
@@ -321,21 +268,14 @@ class ModelComparer:
         }
         
         model = RandomForestRegressor(random_state=6)
+        best_model = run_grid_search(model, param_grid, X_train, y_train, model_name="Random Forest")
+        predictions = best_model.predict(X_val)
         
-        grid_search = TqdmGridSearchCV(
-            model, 
-            param_grid, 
-            cv=5,
-            scoring='neg_mean_squared_error',
-            verbose=0,
-            n_jobs=4
-        )
-        
-        grid_search.fit(X_train, y_train)
-        best_model = grid_search.best_estimator_
-        
+        metrics = self._calculate_metrics(y_val, predictions)
         self.models['random_forest'] = best_model
-        return self.evaluate_model(best_model, X_val, y_val)    
+        
+        return metrics
+     
 
     def train_lightgbm(self, X_train, y_train, X_val, y_val) -> Dict[str, float]:
         print("\nEntrenando LightGBM")
@@ -348,11 +288,12 @@ class ModelComparer:
         }
         
         model = LGBMRegressor(random_state=6)
-        grid_search = TqdmGridSearchCV(model, param_grid, cv=5, scoring='neg_mean_squared_error', verbose=0, n_jobs=4)
+        best_model = run_grid_search_with_progress(model, param_grid, X_train, y_train, model_name="LightGBM")
+        predictions = best_model.predict(X_val)
         
-        grid_search.fit(X_train, y_train)
-        best_model = grid_search.best_estimator_
-        
+        metrics = self._calculate_metrics(y_val, predictions)
         self.models['lightgbm'] = best_model
-        return self.evaluate_model(best_model, X_val, y_val)
+        
+        return metrics
+
 
