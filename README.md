@@ -94,7 +94,7 @@ The project extracts several types of features:
 The project compares two models:
 - Gradient Boosting Machine (GBM)
 - XGBoost
-- Linear Regression
+- Random Forest
 - LightGBM
 
 Models are evaluated using:
