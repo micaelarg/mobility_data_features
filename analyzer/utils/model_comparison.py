@@ -118,7 +118,7 @@ class ModelComparer:
         
         for model_name, train_func in models_to_train.items():
             try:
-                print(f"\nEntrenando {model_name}")
+                # print(f"\nEntrenando {model_name}")
                 self.metrics[model_name] = train_func(
                     prepared_data['X_train'],
                     prepared_data['y_train'],
