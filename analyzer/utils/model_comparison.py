@@ -14,6 +14,7 @@ from typing import Tuple
 from sklearn.model_selection import GridSearchCV, train_test_split
 from lightgbm import LGBMRegressor
 # from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.ensemble import RandomForestRegressor
 
 
 
@@ -132,6 +133,7 @@ class ModelComparer:
             'XGBoost': self.train_xgboost,
             # 'LinearRegression': self.train_regression,
             'LightGBM': self.train_lightgbm,
+            'RandomForest': self.train_random_forest,
         }
         
         for model_name, train_func in models_to_train.items():
@@ -299,6 +301,32 @@ class ModelComparer:
     #             'r2': float('-inf')
     #         }
 
+    def train_random_forest(self, X_train, y_train, X_val, y_val) -> Dict[str, float]:
+        print("\nEntrenando Random Forest")
+        
+        param_grid = {
+            'n_estimators': [100, 200, 300],
+            'max_depth': [None, 10, 20, 30],
+            'min_samples_split': [2, 5, 10],
+            'min_samples_leaf': [1, 2, 4]
+        }
+        
+        model = RandomForestRegressor(random_state=6)
+        
+        grid_search = TqdmGridSearchCV(
+            model, 
+            param_grid, 
+            cv=3,
+            scoring='neg_mean_squared_error',
+            verbose=0,
+            n_jobs=4
+        )
+        
+        grid_search.fit(X_train, y_train)
+        best_model = grid_search.best_estimator_
+        
+        self.models['random_forest'] = best_model
+        return self.evaluate_model(best_model, X_val, y_val)    
 
     def train_lightgbm(self, X_train, y_train, X_val, y_val) -> Dict[str, float]:
         print("\nEntrenando LightGBM")
