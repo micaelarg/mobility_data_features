@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Tuple
 from sklearn.model_selection import GridSearchCV, train_test_split
 from lightgbm import LGBMRegressor
-from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.ensemble import RandomForestRegressor
 
 
@@ -113,12 +112,10 @@ class ModelComparer:
             'xgboost': self.train_xgboost,
             'lightgbm': self.train_lightgbm,
             'random_forest': self.train_random_forest,
-            'linear_regression': self.train_regression,
         }
         
         for model_name, train_func in models_to_train.items():
             try:
-                # print(f"\nEntrenando {model_name}")
                 self.metrics[model_name] = train_func(
                     prepared_data['X_train'],
                     prepared_data['y_train'],
@@ -220,43 +217,17 @@ class ModelComparer:
             verbosity=0,
             n_jobs=4
         )
-        best_model = run_grid_search(model, param_grid, X_train, y_train, model_name="XGBoost")
+    
+        grid_search = GridSearchCV(model, param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=4, verbose=1)
+        grid_search.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
+    
+        best_model = grid_search.best_estimator_
         predictions = best_model.predict(X_val)
         
         metrics = self._calculate_metrics(y_val, predictions)
         self.models['xgboost'] = best_model
         
         return metrics
-
-
-    def train_regression(self, X_train, y_train, X_val, y_val) -> Dict[str, float]:
-        print("\nEntrenando Plain Linear Regression")
-        model = LinearRegression()
-        
-        try:
-
-            model.fit(X_train, y_train)
-            
-            self.models['linear_regression'] = model
-            metrics = self.evaluate_model(model, X_val, y_val)
-            
-            if np.isinf(metrics['rmse']):
-                print("\nSwitch a Ridge")
-                model = Ridge(alpha=0.001) 
-                model.fit(X_train, y_train)
-                  
-                self.models['ridge'] = model
-                metrics = self.evaluate_model(model, X_val, y_val)
-    
-            return metrics
-        
-        except Exception as e:
-            print(f"Error entrenando Linear Regression: {e}")
-            return {
-                'rmse': float('inf'),
-                'mae': float('inf'),
-                'r2': float('-inf')
-            }
 
     def train_random_forest(self, X_train, y_train, X_val, y_val) -> Dict[str, float]:
         print("\nEntrenando Random Forest")
@@ -289,7 +260,7 @@ class ModelComparer:
         }
         
         model = LGBMRegressor(random_state=6)
-        best_model = run_grid_search_with_progress(model, param_grid, X_train, y_train, model_name="LightGBM")
+        best_model = run_grid_search(model, param_grid, X_train, y_train, model_name="LightGBM")
         predictions = best_model.predict(X_val)
         
         metrics = self._calculate_metrics(y_val, predictions)
