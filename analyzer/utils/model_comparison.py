@@ -15,10 +15,14 @@ from sklearn.model_selection import GridSearchCV, train_test_split
 from lightgbm import LGBMRegressor
 # from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.ensemble import RandomForestRegressor
-
-
+from tqdm import tqdm
+import time
 
 class TqdmGridSearchCV(GridSearchCV):
+    def __init__(self, *args, model_name="", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.model_name = model_name
+
     def _get_param_iterator(self):
         param_grid = self.param_grid
         if not isinstance(param_grid, (list, tuple)):
@@ -34,11 +38,16 @@ class TqdmGridSearchCV(GridSearchCV):
     def _run_search(self, evaluate_candidates):
         param_combinations = list(self._get_param_iterator())
         n_combinations = len(param_combinations)
-                
+
         def evaluate_candidates_with_progress(candidates):
-            with tqdm(total=n_combinations, desc='Grid Search') as pbar:
-                for parameters in candidates:
+            with tqdm(total=n_combinations, desc=f"Grid Search ({self.model_name})") as pbar:
+                start_time = time.time()
+                for i, parameters in enumerate(candidates):
                     yield parameters
+                    elapsed_time = time.time() - start_time
+                    avg_time_per_iteration = elapsed_time / (i + 1)
+                    remaining_time = avg_time_per_iteration * (n_combinations - i - 1)
+                    pbar.set_postfix(time_left=f"{remaining_time:.2f}s")
                     pbar.update(1)
                     
         return evaluate_candidates(evaluate_candidates_with_progress(param_combinations))
@@ -316,7 +325,7 @@ class ModelComparer:
         grid_search = TqdmGridSearchCV(
             model, 
             param_grid, 
-            cv=3,
+            cv=5,
             scoring='neg_mean_squared_error',
             verbose=0,
             n_jobs=4
@@ -339,7 +348,7 @@ class ModelComparer:
         }
         
         model = LGBMRegressor(random_state=6)
-        grid_search = TqdmGridSearchCV(model, param_grid, cv=3, scoring='neg_mean_squared_error', verbose=0, n_jobs=4)
+        grid_search = TqdmGridSearchCV(model, param_grid, cv=5, scoring='neg_mean_squared_error', verbose=0, n_jobs=4)
         
         grid_search.fit(X_train, y_train)
         best_model = grid_search.best_estimator_
