@@ -11,6 +11,7 @@ from data.external_data.location_data import (
     geographic_features
 )
 from analyzer.utils.model_comparison import ModelComparer
+from sklearn.impute import SimpleImputer
 
 
 def main():
