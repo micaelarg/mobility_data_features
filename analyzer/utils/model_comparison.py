@@ -35,9 +35,9 @@ class ModelComparer:
         transformations = {}
         for feature in selected_features:
             transformations[f"{feature}_squared"] = data[feature] ** 2
-            transformations[f"{feature}_cubed"] = data[feature] ** 3 
-            transformations[f"{feature}_sqrt"] = np.sqrt(np.abs(data[feature]))
-            transformations[f"{feature}_log"] = np.log1p(np.abs(data[feature]))
+            # transformations[f"{feature}_cubed"] = data[feature] ** 3 
+            # transformations[f"{feature}_sqrt"] = np.sqrt(np.abs(data[feature]))
+            # transformations[f"{feature}_log"] = np.log1p(np.abs(data[feature]))
     
         transformed_features = pd.DataFrame(transformations, index=data.index)
         data = pd.concat([data, transformed_features], axis=1)
