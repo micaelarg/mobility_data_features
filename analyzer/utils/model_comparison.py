@@ -7,13 +7,13 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 import matplotlib.pyplot as plt
 from typing import Dict, List
-from tqdm.auto import tqdm
 from pathlib import Path
 from typing import Tuple
 from sklearn.model_selection import GridSearchCV, train_test_split
 from lightgbm import LGBMRegressor
 from sklearn.ensemble import RandomForestRegressor
-
+from sklearn.impute import SimpleImputer
+from itertools import combinations
 
 
 def run_grid_search(estimator, param_grid, X_train, y_train, model_name=""):
@@ -35,10 +35,12 @@ class ModelComparer:
         transformations = {}
         for feature in selected_features:
             transformations[f"{feature}_squared"] = data[feature] ** 2
-            # transformations[f"{feature}_cubed"] = data[feature] ** 3 
-            # transformations[f"{feature}_sqrt"] = np.sqrt(np.abs(data[feature]))
-            # transformations[f"{feature}_log"] = np.log1p(np.abs(data[feature]))
-    
+            transformations[f"{feature}_cubed"] = data[feature] ** 3 
+            transformations[f"{feature}_sqrt"] = np.sqrt(np.abs(data[feature]))
+            transformations[f"{feature}_log"] = np.log1p(np.abs(data[feature]))
+        for feature1, feature2 in combinations(selected_features, 2):
+            transformations[f"{feature1}_x_{feature2}"] = data[feature1] * data[feature2]
+        
         transformed_features = pd.DataFrame(transformations, index=data.index)
         data = pd.concat([data, transformed_features], axis=1)
         
@@ -83,13 +85,28 @@ class ModelComparer:
         }
     
     def prepare_test_data(self, test_data: pd.DataFrame) -> np.ndarray:
+        # Step 1: Select the base features that are actually present in the test data
         base_features = [col for col in self.feature_cols if col in test_data.columns]
+    
+        # Step 2: Apply non-linear transformations to the test data (squared, cubed, etc.)
         test_data = self.add_non_linear_features(test_data[base_features], base_features)
+    
+        # Step 3: Handle missing features by filling missing columns with the mean value from training
         missing_features = [f for f in self.feature_cols if f not in test_data.columns]
-        print('There are missing features')
+        print("There are missing features:", missing_features)
+    
+        # Use mean imputation instead of filling with zeros for the missing features
         for feature in missing_features:
             test_data[feature] = 0
-        return test_data
+    
+        # Step 4: Impute any remaining missing values with the mean (this applies to all features in test_data)
+        imputer = SimpleImputer(strategy="mean")
+        test_data_imputed = imputer.fit_transform(test_data)
+    
+        # Step 5: Scale the test data using the scaler fitted on training data
+        test_features_scaled = self.feature_transformer.transform(test_data_imputed)
+    
+        return test_features_scaled
 
     
     def evaluate_model(self, model, X_val, y_val_log) -> Dict[str, float]:
