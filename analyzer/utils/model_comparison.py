@@ -83,7 +83,8 @@ class ModelComparer:
         }
     
     def prepare_test_data(self, test_data: pd.DataFrame) -> np.ndarray:
-        test_data = self.add_non_linear_features(test_data[self.feature_cols], self.feature_cols)
+        required_features = [f"{feature}_squared" for feature in self.feature_cols if f"{feature}_squared" not in test_data.columns]
+        test_data = self.add_non_linear_features(test_data[self.feature_cols], required_features)
         test_data_scaled = self.feature_transformer.transform(test_data)
         
         return test_data_scaled
