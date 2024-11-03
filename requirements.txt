@@ -1,0 +1,30 @@
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+pyarrow>=14.0.1
+
+# Geospatial
+h3>=3.7.6 
+
+# Machine Learning
+scikit-learn>=1.2.0
+xgboost>=2.0.0
+
+# Progress bars
+tqdm>=4.65.0
+
+# Type hints
+typing>=3.7.4
+types-setuptools>=69.0.0
+types-tqdm>=4.65.0
+typing-extensions>=4.8.0
+
+# Plotting
+matplotlib>=3.7.0
+
+# File handling
+pyarrow>=14.0.1  
+
+# Dev tools (depending on the IDE but jic)
+ipykernel>=6.0.0  
+spyder-kernels>=2.4.0  
